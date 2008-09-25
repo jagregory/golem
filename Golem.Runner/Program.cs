@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,6 +11,8 @@ namespace Golem.Runner
 {
     public class Program
     {
+        private static readonly IList<string> preferredLocations = new[] { "recipes" };
+
         public static void Main(string[] args)
         {
             Console.WriteLine("Golem (Beta) 2008\nYour friendly executable .NET build tool. \n");
@@ -64,8 +67,11 @@ namespace Golem.Runner
                 finder = new RecipeCataloger(config.SearchPaths.ToArray());
             else
             {
-                Console.WriteLine("Scanning directories for Build Recipes (could take a while)...");
-                finder = new RecipeCataloger(Environment.CurrentDirectory);
+                Console.WriteLine("Scanning directories for Build Recipes...");
+                
+                var searchPaths = GetSearchPaths();
+
+                finder = new RecipeCataloger(searchPaths.ToArray());
             }
 
             found = finder.CatalogueRecipes();
@@ -76,6 +82,38 @@ namespace Golem.Runner
                 config.Save();
             }
             return finder;
+        }
+
+        /// <summary>
+        /// Gets the paths to search for recipes in.
+        /// </summary>
+        /// <returns>List of search paths</returns>
+        private static List<string> GetSearchPaths()
+        {
+            Console.WriteLine("Scanning for preferred locations...");
+            Console.WriteLine();
+
+            var searchPaths = new List<string>();
+
+            // looking for any preferred locations, which are pre-named folders where
+            // assemblies can be dropped. Doing this currently because the regular
+            // search dies on my rather large folder structure.
+            foreach (var location in preferredLocations)
+            {
+                if (Directory.Exists(location))
+                {
+                    Console.WriteLine("Found: " + location);
+                    searchPaths.Add(location);
+                }
+            }
+
+            if (searchPaths.Count == 0)
+            {
+                Console.WriteLine("None found, recursively searching  (could take a while)...");
+                searchPaths.Add(Environment.CurrentDirectory);
+            }
+
+            return searchPaths;
         }
 
         private static void ShowList(IList<Recipe> found)
