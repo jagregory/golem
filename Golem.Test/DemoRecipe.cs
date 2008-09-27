@@ -3,48 +3,42 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using Golem.Core;
-using Golem.Core;
 
 namespace Golem.Test
 {
-    [Recipe(Name="demo2")]
-    public class Demo2Recipe 
+    public class Demo2Recipe : RecipeBase
     {
-        [Task(Name = "one", After = new[] { "Three", "Two" })]
+        [DependsOn("Three", "Two")]
         public void One()
         {
             Console.WriteLine("One!");
         }
 
-        [Task(Name = "two")]
         public void Two()
         {
             Console.WriteLine("Two!");
         }
 
-        [Task(Name = "three")]
         public void Three()
         {
             Console.WriteLine("Three!");
         }
     }
 
-    [Recipe(Name = "demo")]
-    public class DemoRecipe 
+    public class DemoRecipe : RecipeBase
     {
-        [Task(Name = "run")]
         public void Default()
         {
             AppDomain.CurrentDomain.SetData("TEST", "TEST");
         }
 
-        [Task(Name="list", Description = "List all NUnit tests in solution")]
+        [Description("List all NUnit tests in solution")]
         public void List()
         {
             AppDomain.CurrentDomain.SetData("TEST", "LIST");
         }
         
-        [Task(Name="stats", Description="Lists line counts for all types of files")]
+        [Description("Lists line counts for all types of files")]
         public void Stats()
         {
             string rootDir = Locations.StartDirs[0];
@@ -98,20 +92,16 @@ namespace Golem.Test
         }
     }
 
-    [Recipe]
-    public class Demo3Recipe 
+    public class Demo3Recipe : RecipeBase
     {
-        [Task]
         public void Hello()
         {
             Console.WriteLine("Hello");
         }
     }
 
-    [Recipe]
     public class Demo4Recipe : RecipeBase
     {
-        [Task]
         public void Hello()
         {
             Console.WriteLine(this.AllAssemblies.Count);

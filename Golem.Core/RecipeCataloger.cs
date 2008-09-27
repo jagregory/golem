@@ -133,43 +133,14 @@ namespace Golem.Core
                 }
             
         }
-
-
-        public RecipeAttribute GetRecipeAttributeOrNull(Type type)
-        {
-            //get recipe attributes for type 
-            var atts = type.GetCustomAttributes(typeof(RecipeAttribute), true);
-
-            //should only be one per type
-            if (atts.Length > 1)
-                throw new Exception("Expected only 1 recipe attribute, but got more");
-
-            //return if none, we'll skip this class
-            if (atts.Length == 0)
-                return null;
-
-            
-
-            var recipeAtt = atts[0] as RecipeAttribute;
-
-            //throw if bad case. Should cast fine (if not, then might indicate 2 of the same assembly is loaded)
-            if (recipeAtt == null)
-                throw new Exception("Casting error for RecipeAttribute. Same assembly loaded more than once?");
-
-            return recipeAtt;
-        }
-
         
         private void ExtractRecipesFromType(Type type, LoadedAssemblyInfo la)
         {
-            //find the attribute on the assembly if there is one
-            var recipeAtt = GetRecipeAttributeOrNull(type);
-            
-            //if not found, return
-            if (recipeAtt == null) return;
+            if (!typeof(RecipeBase).IsAssignableFrom(type)) return;
+            if (type.IsAbstract) return;
             
             //create recipe details from attribute
-            Recipe recipe = CreateRecipeFromAttribute(type, recipeAtt);
+            Recipe recipe = CreateRecipeForType(type);
 
             //associate recipe with assembly
             la.FoundRecipes.Add(recipe);
@@ -179,14 +150,21 @@ namespace Golem.Core
             
         }
 
-        private static Recipe CreateRecipeFromAttribute(Type type, RecipeAttribute recipeAtt)
+        private static Recipe CreateRecipeForType(Type type)
         {
+            var recipeName = type.Name.ToLower();
+
+            if (recipeName.EndsWith("recipe"))
+                recipeName = recipeName.Substring(0, recipeName.Length - 6);
+
+            var descriptionAttribute = type.GetCustomAttribute<DescriptionAttribute>(false);
+
             return new Recipe
-                       {
-                           Class = type,
-                           Name = String.IsNullOrEmpty(recipeAtt.Name) ? (type.Name == "RecipesRecipe" ? "recipes" : type.Name.Replace("Recipe", "").ToLower()) : recipeAtt.Name,
-                           Description = ! String.IsNullOrEmpty(recipeAtt.Description) ? recipeAtt.Description : null
-                       };
+            {
+                Class = type,
+                Name = recipeName,
+                Description = descriptionAttribute == null ? "" : descriptionAttribute.Description
+            };
         }
 
         private static void AddTasksToRecipe(Type type, Recipe recipe)
@@ -194,35 +172,26 @@ namespace Golem.Core
             //loop through methods in class
             foreach(var method in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly ))
             {
-                //get the custom attributes on the method
-                var foundAttributes = method.GetCustomAttributes(typeof(TaskAttribute), false);
-                
-                if(foundAttributes.Length > 1)
-                    throw new Exception("Should only be one task attribute on a method");
+                var dependsAttribute = method.GetCustomAttribute<DependsOnAttribute>(false);
+                var dependencies = new string[] {};
 
-                //if none, skp to the next method
-                if (foundAttributes.Length == 0)
-                    continue;
-                
-                var taskAttribute = foundAttributes[0] as TaskAttribute;
-                
-                if (taskAttribute == null)
-                    throw new Exception("couldn't cast TaskAttribute correctly, more that one assembly loaded?");
+                if (dependsAttribute != null)
+                    dependencies = dependsAttribute.Dependencies;
 
                 //get the task based on attribute contents
-                Task t = CreateTaskFromAttribute(method, taskAttribute);
+                Task t = CreateTaskFromMethod(method);
 
                 //build list of dependent tasks
-                CreateDependentTasks(type, taskAttribute, t);
+                CreateDependentTasks(type, dependencies, t);
 
                 //add the task to the recipe
                 recipe.Tasks.Add(t);
             }
         }
 
-        private static void CreateDependentTasks(Type type, TaskAttribute taskAttribute, Task task)
+        private static void CreateDependentTasks(Type type, string[] dependencies, Task task)
         {
-            foreach(string methodName in taskAttribute.After)
+            foreach(string methodName in dependencies)
             {
                 var dependee = type.GetMethod(methodName);
                 if(dependee == null) throw new Exception(String.Format("No dependee method {0}",methodName));
@@ -230,25 +199,20 @@ namespace Golem.Core
             }
         }
 
-        private static Task CreateTaskFromAttribute(MethodInfo method, TaskAttribute ta)
+        private static Task CreateTaskFromMethod(MethodInfo method)
         {
-            Task t = new Task();
-                    
-            if(! String.IsNullOrEmpty(ta.Name))
-                t.Name = ta.Name;
-            else
-                t.Name = method.Name.Replace("Task", "").ToLower();
-                    
-                    
-            t.Method = method;
-                    
-            if(! String.IsNullOrEmpty(ta.Description))
-                t.Description = ta.Description;
-            else
-                t.Description = "";
-            return t;
-        }
+            string name = method.Name.ToLower();
+            var descriptionAttribute = method.GetCustomAttribute<DescriptionAttribute>(false);
 
-       
+            if (name.EndsWith("task"))
+                name = name.Substring(0, name.Length - 4);
+
+            return new Task
+            {
+                Name = name,
+                Method = method,
+                Description = descriptionAttribute == null ? "" : descriptionAttribute.Description
+            };
+        }
     }
 }
