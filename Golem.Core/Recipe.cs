@@ -1,31 +1,38 @@
-using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 
 namespace Golem.Core
 {
-    public class Recipe
+    public abstract class Recipe
     {
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public List<Task> Tasks { get; private set; }
-        public Type Class{ get; set;}
+        private readonly List<Task> tasks = new List<Task>();
 
-        public Recipe()
+        public Task Task(string name)
         {
-            Tasks = new List<Task>();
+            return Task(name, null);
         }
 
-        public Task GetTaskForMethod(MethodInfo methodInfo)
+        public Task Task(string name, string description)
         {
-            foreach(Task t in Tasks)
-            {
-                if (t.Method != null && t.Method.Name == methodInfo.Name)
-                {
-                    return t;
-                }
-            }
-            return null;
+            var task = new Task { Name = name, Description = description };
+
+            tasks.Add(task);
+
+            return task;
+        }
+
+        public abstract void RegisterTasks();
+
+        public List<Task> Tasks
+        {
+            get { return tasks; }
+        }
+
+        public string Name
+        {
+            // make this smarter, should support plain RecipeName, but also RecipeNameRecipe
+            get { return GetType().Name.ToLower(); }
         }
     }
 }

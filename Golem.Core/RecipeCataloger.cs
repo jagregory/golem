@@ -71,8 +71,6 @@ namespace Golem.Core
             }
         }
 
-        
-
         /// <summary>
         /// 
         /// </summary>
@@ -134,121 +132,34 @@ namespace Golem.Core
             
         }
 
-
-        public RecipeAttribute GetRecipeAttributeOrNull(Type type)
-        {
-            //get recipe attributes for type 
-            var atts = type.GetCustomAttributes(typeof(RecipeAttribute), true);
-
-            //should only be one per type
-            if (atts.Length > 1)
-                throw new Exception("Expected only 1 recipe attribute, but got more");
-
-            //return if none, we'll skip this class
-            if (atts.Length == 0)
-                return null;
-
-            
-
-            var recipeAtt = atts[0] as RecipeAttribute;
-
-            //throw if bad case. Should cast fine (if not, then might indicate 2 of the same assembly is loaded)
-            if (recipeAtt == null)
-                throw new Exception("Casting error for RecipeAttribute. Same assembly loaded more than once?");
-
-            return recipeAtt;
-        }
-
         
         private void ExtractRecipesFromType(Type type, LoadedAssemblyInfo la)
         {
-            //find the attribute on the assembly if there is one
-            var recipeAtt = GetRecipeAttributeOrNull(type);
-            
-            //if not found, return
-            if (recipeAtt == null) return;
+            if (!typeof(Recipe).IsAssignableFrom(type)) return;
+            if (type.IsAbstract) return;
             
             //create recipe details from attribute
-            Recipe recipe = CreateRecipeFromAttribute(type, recipeAtt);
+            Recipe recipe = (Recipe)Activator.CreateInstance(type);
 
             //associate recipe with assembly
             la.FoundRecipes.Add(recipe);
 
+            recipe.RegisterTasks();
+
             //trawl through and add the tasks
-            AddTasksToRecipe(type, recipe);
-            
-        }
-
-        private static Recipe CreateRecipeFromAttribute(Type type, RecipeAttribute recipeAtt)
-        {
-            return new Recipe
-                       {
-                           Class = type,
-                           Name = String.IsNullOrEmpty(recipeAtt.Name) ? (type.Name == "RecipesRecipe" ? "recipes" : type.Name.Replace("Recipe", "").ToLower()) : recipeAtt.Name,
-                           Description = ! String.IsNullOrEmpty(recipeAtt.Description) ? recipeAtt.Description : null
-                       };
-        }
-
-        private static void AddTasksToRecipe(Type type, Recipe recipe)
-        {
-            //loop through methods in class
-            foreach(var method in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly ))
+            foreach (var task in recipe.Tasks)
             {
-                //get the custom attributes on the method
-                var foundAttributes = method.GetCustomAttributes(typeof(TaskAttribute), false);
-                
-                if(foundAttributes.Length > 1)
-                    throw new Exception("Should only be one task attribute on a method");
+                for (var i = 0; i < task.Dependencies.Count; i++)
+                {
+                    var dependency = task.Dependencies[i];
+                    var dependentTask = recipe.Tasks.Find(t => t.Name == dependency);
 
-                //if none, skp to the next method
-                if (foundAttributes.Length == 0)
-                    continue;
-                
-                var taskAttribute = foundAttributes[0] as TaskAttribute;
-                
-                if (taskAttribute == null)
-                    throw new Exception("couldn't cast TaskAttribute correctly, more that one assembly loaded?");
+                    if (dependentTask == null)
+                        throw new InvalidDependentTaskException(dependency);
 
-                //get the task based on attribute contents
-                Task t = CreateTaskFromAttribute(method, taskAttribute);
-
-                //build list of dependent tasks
-                CreateDependentTasks(type, taskAttribute, t);
-
-                //add the task to the recipe
-                recipe.Tasks.Add(t);
+                    task.ResolvedDependencies.Add(dependentTask);
+                }
             }
         }
-
-        private static void CreateDependentTasks(Type type, TaskAttribute taskAttribute, Task task)
-        {
-            foreach(string methodName in taskAttribute.After)
-            {
-                var dependee = type.GetMethod(methodName);
-                if(dependee == null) throw new Exception(String.Format("No dependee method {0}",methodName));
-                task.DependsOnMethods.Add(dependee);
-            }
-        }
-
-        private static Task CreateTaskFromAttribute(MethodInfo method, TaskAttribute ta)
-        {
-            Task t = new Task();
-                    
-            if(! String.IsNullOrEmpty(ta.Name))
-                t.Name = ta.Name;
-            else
-                t.Name = method.Name.Replace("Task", "").ToLower();
-                    
-                    
-            t.Method = method;
-                    
-            if(! String.IsNullOrEmpty(ta.Description))
-                t.Description = ta.Description;
-            else
-                t.Description = "";
-            return t;
-        }
-
-       
     }
 }

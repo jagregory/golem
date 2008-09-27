@@ -28,7 +28,7 @@ namespace Golem.Test
             {
                 Console.WriteLine(r.Name);
             }
-            Assert.AreEqual(4, found.Count);
+            Assert.AreEqual(5, found.Count);
         }
 
         [Test]
@@ -79,8 +79,8 @@ namespace Golem.Test
         {
             var demo2 = found[0];
             Assert.AreEqual("demo2", demo2.Name);
-            Assert.AreEqual(2, demo2.Tasks[0].DependsOnMethods.Count);
-            Assert.AreEqual(demo2.Tasks[0].DependsOnMethods[0].Name, "Three");
+            Assert.AreEqual(2, demo2.Tasks[0].ResolvedDependencies.Count);
+            Assert.AreEqual(demo2.Tasks[0].ResolvedDependencies[0].Name, "three");
         }
 
         [Test]
@@ -117,6 +117,12 @@ namespace Golem.Test
             var runner = new TaskRunner(cataloger);
             runner.Run(demo4,demo4.Tasks[0]);
         }
-        
+
+        [Test]
+        public void Can_Run_Extension_Tasks()
+        {
+            var runner = new TaskRunner(cataloger);
+            runner.Run("customtasksupport", "wrapped");
+        }
     }
 }

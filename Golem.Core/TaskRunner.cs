@@ -26,22 +26,7 @@ namespace Golem.Core
             //TODO: Tasks should run in their own appdomain. 
             //      We need to create an app domain that has the 
             //      base dir the same as the target assembly
-            
-            var recipeInstance = Activator.CreateInstance(recipe.Class);
-            SetContextualInformationIfInheritsRecipeBase(recipeInstance);
-            task.Method.Invoke(recipeInstance, null);
-        }
-
-        private void SetContextualInformationIfInheritsRecipeBase(object recipeInstance)
-        {
-            var tmpRecipe = recipeInstance as RecipeBase;
-            
-            if(tmpRecipe == null)
-                return;
-
-            tmpRecipe.AllAssemblies = cataloger.AssembliesExamined;
-            tmpRecipe.AllRecipes = cataloger.Recipes;
-            
+            task.Execute();
         }
 
         //TODO: Run is Too long
@@ -59,9 +44,9 @@ namespace Golem.Core
                     {
                         if(t.Name.ToLower() == taskName.ToLower())
                         {
-                            foreach(var methodInfo in t.DependsOnMethods)
+                            foreach(var dependentTask in t.ResolvedDependencies)
                             {
-                                Run(r, r.GetTaskForMethod(methodInfo));
+                                Run(r, dependentTask);
                             }
                             Run(r, t);
                             return;

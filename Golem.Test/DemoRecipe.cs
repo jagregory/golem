@@ -7,74 +7,71 @@ using Golem.Core;
 
 namespace Golem.Test
 {
-    [Recipe(Name="demo2")]
-    public class Demo2Recipe 
+    public class Demo2 : Recipe 
     {
-        [Task(Name = "one", After = new[] { "Three", "Two" })]
-        public void One()
+        public override void RegisterTasks()
         {
-            Console.WriteLine("One!");
-        }
+            Task("one").Depends("three", "two").Do(() =>
+            {
+                Console.WriteLine("One!");
+            });
 
-        [Task(Name = "two")]
-        public void Two()
-        {
-            Console.WriteLine("Two!");
-        }
+            Task("two").Do(() =>
+            {
+                Console.WriteLine("Two!");
+            });
 
-        [Task(Name = "three")]
-        public void Three()
-        {
-            Console.WriteLine("Three!");
+            Task("three").Do(() =>
+            {
+                Console.WriteLine("Three!");
+            });
         }
     }
 
-    [Recipe(Name = "demo")]
-    public class DemoRecipe 
+    public class Demo : Recipe
     {
-        [Task(Name = "run")]
-        public void Default()
+        public override void RegisterTasks()
         {
-            AppDomain.CurrentDomain.SetData("TEST", "TEST");
+            Task("run").Do(() =>
+            {
+                AppDomain.CurrentDomain.SetData("TEST", "TEST");
+            });
+
+            Task("list", "List all NUnit tests in solution").Do(() =>
+            {
+                AppDomain.CurrentDomain.SetData("TEST", "LIST");
+            });
+
+            Task("stats", "Lists line counts for all types of files").Do(() =>
+            {
+                string rootDir = Locations.StartDirs[0];
+                Console.WriteLine(rootDir);
+                var count = new Dictionary<string, long>()
+                {{"lines", 0}, {"classes", 0}, {"files", 0}, {"enums", 0}, {"methods", 0}, {"comments", 0}};
+                GetLineCount(rootDir, "*.cs", count);
+
+
+                Console.WriteLine("c# Files:\t\t{0}", count["files"]);
+                Console.WriteLine("c# Classes:  \t{0}", count["classes"]);
+                Console.WriteLine("c# Methods:  \t{0}", count["methods"]);
+                Console.WriteLine("c# Lines:\t\t{0}", count["lines"]);
+                Console.WriteLine("c# Comment Lines:\t\t{0}", count["comments"]);
+                Console.WriteLine("Avg Methods Per Class:\t\t{0}", count["methods"]/count["classes"]);
+            });
         }
 
-        [Task(Name="list", Description = "List all NUnit tests in solution")]
-        public void List()
-        {
-            AppDomain.CurrentDomain.SetData("TEST", "LIST");
-        }
-        
-        [Task(Name="stats", Description="Lists line counts for all types of files")]
-        public void Stats()
-        {
-            string rootDir = Locations.StartDirs[0];
-            Console.WriteLine(rootDir);
-            var count = new Dictionary<string, long>() { { "lines", 0 }, { "classes", 0 }, { "files", 0 }, { "enums", 0 }, { "methods", 0 }, { "comments", 0 } };
-            GetLineCount(rootDir, "*.cs", count);
-
-            
-            Console.WriteLine("c# Files:\t\t{0}", count["files"]);
-            Console.WriteLine("c# Classes:  \t{0}", count["classes"]);
-            Console.WriteLine("c# Methods:  \t{0}", count["methods"]);
-            Console.WriteLine("c# Lines:\t\t{0}", count["lines"]);
-            Console.WriteLine("c# Comment Lines:\t\t{0}", count["comments"]);
-            Console.WriteLine("Avg Methods Per Class:\t\t{0}", count["methods"]/count["classes"]);
-            
-        }
-        
-
-        private static void GetLineCount(string rootDir, string fileFilter, Dictionary<string,long> counts)
+        private static void GetLineCount(string rootDir, string fileFilter, Dictionary<string, long> counts)
         {
             var files = Directory.GetFiles(rootDir, fileFilter, SearchOption.AllDirectories);
             long lineCount = 0;
-            foreach(var file in files)
+            foreach (var file in files)
             {
-                using(var r = File.OpenText(file))
+                using (var r = File.OpenText(file))
                 {
                     counts["files"] += 1;
 
                     var line = r.ReadLine();
-                    while(line != null)
+                    while (line != null)
                     {
                         if (fileFilter == "*.cs" && Regex.Match(line, ".+[public|private|internal|protected].+class.+").Length > 0)
                             counts["classes"] += 1;
@@ -94,28 +91,65 @@ namespace Golem.Test
                     }
                 }
             }
-            
+
         }
     }
 
-    [Recipe]
-    public class Demo3Recipe 
+    public class Demo3 : Recipe
     {
-        [Task]
-        public void Hello()
+        public override void RegisterTasks()
         {
-            Console.WriteLine("Hello");
+            Task("hello").Do(() =>
+            {
+                Console.WriteLine("Hello!");
+            });
         }
     }
 
-    [Recipe]
-    public class Demo4Recipe : RecipeBase
+    public class Demo4 : Recipe
     {
-        [Task]
-        public void Hello()
+        public override void RegisterTasks()
         {
-            Console.WriteLine(this.AllAssemblies.Count);
-            Console.WriteLine(this.AllRecipes.Count);
+            Task("hello").Do(() =>
+            {
+                Console.WriteLine("Not implemented yet: this.AllAssemblies.Count");
+                Console.WriteLine("Not implemented yet: this.AllRecipes.Count");
+            });
+        }
+    }
+
+    public abstract class SpecialRecipe : Recipe
+    {
+        public WrapperTask WrapTask(string name)
+        {
+            var task = new WrapperTask { Name = name };
+
+            Tasks.Add(task);
+
+            return task;
+        }
+    }
+
+    public class WrapperTask : Task
+    {
+        public override void Execute()
+        {
+            Console.WriteLine("I'm a wrapping task...");
+
+            base.Execute();
+
+            Console.WriteLine("... wraptastic!");
+        }
+    }
+
+    public class CustomTaskSupport : SpecialRecipe
+    {
+        public override void RegisterTasks()
+        {
+            WrapTask("wrapped").Do(() =>
+            {
+                Console.WriteLine("I should be wrapped");
+            });
         }
     }
 }

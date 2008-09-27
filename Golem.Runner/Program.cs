@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -74,6 +75,7 @@ namespace Golem.Runner
                 finder = new RecipeCataloger(searchPaths.ToArray());
             }
 
+            // find golemfile... just using default for now
             found = finder.CatalogueRecipes();
 
             if(config.SearchPaths.Count == 0)
