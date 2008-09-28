@@ -67,7 +67,8 @@ Here is a Golem recipe in c# code:
 				Console.WriteLine("Database Schema Dropped");
 			});
 			
-			Task("create", "Create the development database").Do(() =>
+			Task("create", "Create the development database")
+				.Depends("script:sprocs").Do(() =>
 			{
 				//some regular c# code to create the database			
 				//...load and execute the SQL create script
@@ -82,6 +83,16 @@ Here is a Golem recipe in c# code:
 				//...load and execute the insert SQL script
 				
 				Console.WriteLine("Sample Dev Data Loaded");	
+			});
+			
+			Namespace("script", () =>
+			{
+				Task("sprocs", "Run scripted sprocs against database").Do(() =>
+				{
+					// run sprocs from file
+					
+					Console.WriteLine("Ran stored procedures from scripts");
+				});
 			});
 		}
 	}
@@ -99,6 +110,7 @@ Build your solution, and then type this at the command line:
 	golem db:drop				  # Drop the development database
 	golem db:create               # Create the development database
 	golem db:reset				  # Drop, create and populat the development database
+	golem db:script:sprocs        # Run scripted sprocs against database
 
 You could now type:
 
