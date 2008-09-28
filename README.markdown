@@ -53,35 +53,36 @@ Here is a Golem recipe in c# code:
 	//
 	//include this anywhere in your solution
 	//
-	
-	[Recipe(Description="Database Build Tasks")]
-	public class DbRecipe
+
+	[Description("Database Build Tasks")]
+	public class DbRecipe : Recipe
 	{
-		[Task(Description="Drop the development database"]
-		public void Drop()
+		public override void RegisterTasks()
 		{
-			//some regular c# code drop the db
-			//...load and execute the SQL drop script
+			Task("drop", "Drop the development database").Do(() =>
+			{
+				//some regular c# code drop the db
+				//...load and execute the SQL drop script
+				
+				Console.WriteLine("Database Schema Dropped");
+			});
 			
-			Console.WriteLine("Database Schema Dropped");
+			Task("create", "Create the development database").Do(() =>
+			{
+				//some regular c# code to create the database			
+				//...load and execute the SQL create script
+				
+				Console.WriteLine("Database Schema Created");
+			});
 			
-		}
-		[Task(Description="Create the development database")	
-		public void Create()
-		{
-			//some regular c# code to create the database			
-			//...load and execute the SQL create script
-			
-			Console.WriteLine("Database Schema Created");			
-		}
-		
-		[Task(Description="Drop, create and populat the development database", After=new[]{"Drop","Create"})
-		public void Reset()
-		{
-			//some regular code to populate data (Drop and Create called automatically)
-			//...load and execute the insert SQL script
-			
-			Console.WriteLine("Sample Dev Data Loaded");			
+			Task("reset", "Drop, create and populate the development database")
+				.Depends("drop", "create").Do(() =>
+			{
+				//some regular code to populate data (Drop and Create called automatically)
+				//...load and execute the insert SQL script
+				
+				Console.WriteLine("Sample Dev Data Loaded");	
+			});
 		}
 	}
 

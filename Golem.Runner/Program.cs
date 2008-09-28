@@ -68,7 +68,7 @@ namespace Golem.Runner
                 finder = new RecipeCataloger(config.SearchPaths.ToArray());
             else
             {
-                Console.WriteLine("Scanning directories for Build Recipes...");
+                Console.WriteLine("Scanning directories for Build GolemFiles...");
                 
                 var searchPaths = GetSearchPaths();
 
@@ -125,7 +125,7 @@ namespace Golem.Runner
                 //Console.WriteLine("\n{0}\n",!String.IsNullOrEmpty(recipe.Description) ? recipe.Description : recipe.Name);
                 foreach(var task in recipe.Tasks)
                 {
-                    var start = "golem " + recipe.Name + ":" + task.Name;
+                    var start = "golem " + recipe.Name + ":" + task.FullName;
                     Console.WriteLine(start.PadRight(30) +"# " + task.Description);
                 }
             }

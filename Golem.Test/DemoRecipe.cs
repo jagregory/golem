@@ -118,6 +118,49 @@ namespace Golem.Test
         }
     }
 
+    public class NsDemo : Recipe
+    {
+        public override void RegisterTasks()
+        {
+            Task("update-db")
+                .Depends("db:backup", "db:replace", "db:run-scripts");
+
+            Namespace("db", () =>
+            {
+                Task("backup").Do(() =>
+                {
+                    Console.WriteLine("Backing up database");
+                });
+
+                Task("replace").Do(() =>
+                {
+                    Console.WriteLine("Replacing database with copy of production");
+                });
+
+                Task("run-scripts")
+                    .Depends("scripts:views", "scripts:functions", "scripts:sprocs");
+
+                Namespace("scripts", () =>
+                {
+                    Task("views").Do(() =>
+                    {
+                        Console.WriteLine("Running views from script");
+                    });
+
+                    Task("functions").Do(() =>
+                    {
+                        Console.WriteLine("Running functions from script");
+                    });
+
+                    Task("sprocs").Do(() =>
+                    {
+                        Console.WriteLine("Running sprocs from script");
+                    });
+                });
+            });
+        }
+    }
+
     public abstract class SpecialRecipe : Recipe
     {
         public WrapperTask WrapTask(string name)

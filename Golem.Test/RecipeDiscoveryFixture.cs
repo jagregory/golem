@@ -12,7 +12,7 @@ namespace Golem.Test
     public class RecipeDiscoveryFixture
     {
         private RecipeCataloger cataloger;
-        IList<Recipe> found;
+        List<Recipe> found;
 
         [SetUp]
         public void Before_Each_Test_Is_Run()
@@ -28,24 +28,49 @@ namespace Golem.Test
             {
                 Console.WriteLine(r.Name);
             }
-            Assert.AreEqual(5, found.Count);
-        }
-
-        [Test]
-        public void Can_Discover_Recipe_Details()
-        {
-            var recipeInfo = found[1];
-            Assert.AreEqual("demo", recipeInfo.Name);
-            
+            Assert.AreEqual(6, found.Count);
         }
 
         [Test]
         public void Can_Discover_Tasks_And_Details()
         {
-            var recipeInfo = found[1];
+            var recipeInfo = found.Find(r => r.Name == "demo");
+
             Assert.AreEqual(3, recipeInfo.Tasks.Count);
             Assert.AreEqual("list", recipeInfo.Tasks[1].Name);
             Assert.AreEqual("List all NUnit tests in solution", recipeInfo.Tasks[1].Description);
+        }
+
+        [Test]
+        public void Can_Discover_Tasks_In_Namespace()
+        {
+            var recipeInfo = found.Find(r => r.Name == "nsdemo");
+
+            Assert.AreEqual(7, recipeInfo.Tasks.Count);
+
+            foreach (var task in recipeInfo.Tasks)
+            {
+                Console.WriteLine(task.FullName);
+            }
+        }
+
+        [Test]
+        public void FullName_Includes_Fully_Nested_Namespaces()
+        {
+            var recipeInfo = found.Find(r => r.Name == "nsdemo");
+
+            Assert.AreEqual(7, recipeInfo.Tasks.Count);
+
+            foreach (var task in recipeInfo.Tasks)
+            {
+                if (task.Name == "update-db") Assert.AreEqual("update-db", task.FullName);
+                if (task.Name == "backup") Assert.AreEqual("db:backup", task.FullName);
+                if (task.Name == "replace") Assert.AreEqual("db:replace", task.FullName);
+                if (task.Name == "run-scripts") Assert.AreEqual("db:run-scripts", task.FullName);
+                if (task.Name == "views") Assert.AreEqual("db:scripts:views", task.FullName);
+                if (task.Name == "functions") Assert.AreEqual("db:scripts:functions", task.FullName);
+                if (task.Name == "sprocs") Assert.AreEqual("db:scripts:sprocs", task.FullName);
+            }
         }
 
         [Test]

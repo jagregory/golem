@@ -1,17 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Reflection;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Golem.Core
 {
-    public class RecipeBase
-    {
-        public IList<Assembly> AllAssemblies = new List<Assembly>();
-        public IList<Recipe> AllRecipes = new List<Recipe>();
-    }
-
     public class TaskRunner
     {
         private RecipeCataloger cataloger;
@@ -26,6 +19,11 @@ namespace Golem.Core
             //TODO: Tasks should run in their own appdomain. 
             //      We need to create an app domain that has the 
             //      base dir the same as the target assembly
+            foreach (var dependency in task.ResolvedDependencies)
+            {
+                Run(recipe, dependency);
+            }
+
             task.Execute();
         }
 
@@ -44,10 +42,6 @@ namespace Golem.Core
                     {
                         if(t.Name.ToLower() == taskName.ToLower())
                         {
-                            foreach(var dependentTask in t.ResolvedDependencies)
-                            {
-                                Run(r, dependentTask);
-                            }
                             Run(r, t);
                             return;
                         }

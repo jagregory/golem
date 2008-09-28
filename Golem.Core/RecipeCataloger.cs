@@ -52,11 +52,11 @@ namespace Golem.Core
         /// <summary>
         /// Queries loaded assembly info to list the associated recipes with each
         /// </summary>
-        public ReadOnlyCollection<Recipe> Recipes
+        public List<Recipe> Recipes
         { 
             get
             {
-                return (from la in _loadedAssemblies from r in la.FoundRecipes select r).ToList().AsReadOnly();
+                return (from la in _loadedAssemblies from r in la.FoundRecipes select r).ToList();
             }
         }
  
@@ -75,7 +75,7 @@ namespace Golem.Core
         /// 
         /// </summary>
         /// <returns></returns>
-        public IList<Recipe> CatalogueRecipes()
+        public List<Recipe> CatalogueRecipes()
         {
             var fileSearch = new RecipeFileSearch(_searchPaths);
             fileSearch.BuildFileList();
@@ -85,7 +85,7 @@ namespace Golem.Core
                 );
             
             ExtractRecipesFromPreLoadedAssemblies();
-            return Recipes.ToArray();
+            return Recipes;
         }
         
         private void PreLoadAssembliesToPreventAssemblyNotFoundError(FileInfo[] assemblyFiles)
@@ -152,7 +152,7 @@ namespace Golem.Core
                 for (var i = 0; i < task.Dependencies.Count; i++)
                 {
                     var dependency = task.Dependencies[i];
-                    var dependentTask = recipe.Tasks.Find(t => t.Name == dependency);
+                    var dependentTask = FindDependentTask(recipe.Tasks, dependency);
 
                     if (dependentTask == null)
                         throw new InvalidDependentTaskException(dependency);
@@ -160,6 +160,25 @@ namespace Golem.Core
                     task.ResolvedDependencies.Add(dependentTask);
                 }
             }
+        }
+
+        private Task FindDependentTask(List<Task> tasks, string dependency)
+        {
+            foreach (var task in tasks)
+            {
+                // TODO: Improve this! Especially the EndsWith one, because that can cause
+                //       all kinds of conflicts. Should figure out if the current task is
+                //       at the same level as the iterated task, then use that as a starting
+                //       point for the match.
+                //
+                //       Currently:
+                //       dependecy = "Core.Bacon" will match "Cheese.Core.Bacon" and "House.Core.Bacon"
+                if (task.Name == dependency) return task;
+                if (task.FullName == dependency) return task;
+                if (task.FullName.EndsWith(dependency)) return task;
+            }
+
+            return null;
         }
     }
 }

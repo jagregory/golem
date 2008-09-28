@@ -5,11 +5,17 @@ namespace Golem.Core
 {
     public class Task
     {
-        private Action executeAction;
+        private Action executeAction = delegate {};
         public string Name { get; set; }
+        public string Namespace { get; set; }
         public string Description { get; set; }
         public IList<string> Dependencies { get; private set; }
         public List<Task> ResolvedDependencies { get; private set; }
+
+        public string FullName
+        {
+            get { return !string.IsNullOrEmpty(Namespace) ? Namespace + ":" + Name : Name; }
+        }
 
         public Task()
         {
